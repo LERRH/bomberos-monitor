@@ -26,3 +26,13 @@ create table if not exists report_history (
 
 create index if not exists report_history_nro_parte_idx on report_history (nro_parte);
 create index if not exists reports_fecha_hora_idx on reports (fecha_hora);
+
+create table if not exists unit_reference (
+    id bigserial primary key,
+    comandancia_code text not null,
+    comandancia_name text not null,
+    cia_code text not null,
+    unit_code text not null
+);
+
+create index if not exists unit_reference_unit_code_idx on unit_reference (unit_code);

@@ -2,3 +2,5 @@
 seen_state.json
 __pycache__/
 *.pyc
+.claude/
+.streamlit/secrets.toml

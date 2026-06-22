@@ -1,6 +1,7 @@
 import os
 from datetime import date, timedelta
 
+import altair as alt
 import pandas as pd
 import psycopg2
 import pydeck as pdk
@@ -52,6 +53,21 @@ reports = run_query(
 
 st.metric("Emergencias en el rango seleccionado", len(reports))
 
+def bar_chart_ordenado(serie, x_label, y_label):
+    df = serie.reset_index()
+    df.columns = [x_label, y_label]
+    chart = (
+        alt.Chart(df)
+        .mark_bar()
+        .encode(
+            x=alt.X(x_label, sort="-y"),
+            y=alt.Y(y_label),
+            tooltip=[x_label, y_label],
+        )
+    )
+    st.altair_chart(chart, use_container_width=True)
+
+
 exploded = reports.explode("unidades").rename(columns={"unidades": "unidad"}).dropna(subset=["unidad"])
 exploded["cia_num"] = exploded["unidad"].str.extract(r"(\d+)")
 
@@ -67,7 +83,7 @@ with col_a:
         .head(15)
     )
     cia_rank.index = "Cia " + cia_rank.index
-    st.bar_chart(cia_rank)
+    bar_chart_ordenado(cia_rank, "compania", "salidas")
 
 with col_b:
     st.subheader("Unidades mas operativas")
@@ -77,7 +93,7 @@ with col_b:
         .sort_values(ascending=False)
         .head(15)
     )
-    st.bar_chart(unidad_rank)
+    bar_chart_ordenado(unidad_rank, "unidad", "salidas")
 
 st.subheader("Mapa de calor de emergencias")
 mapa_df = reports.dropna(subset=["lat", "lon"])

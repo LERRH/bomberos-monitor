@@ -2,11 +2,13 @@ import os
 from datetime import date, timedelta
 
 import altair as alt
+import folium
 import pandas as pd
 import psycopg2
-import pydeck as pdk
 import streamlit as st
 from dotenv import load_dotenv
+from folium.plugins import HeatMap
+from streamlit_folium import st_folium
 
 load_dotenv()
 
@@ -98,14 +100,10 @@ with col_b:
 st.subheader("Mapa de calor de emergencias")
 mapa_df = reports.dropna(subset=["lat", "lon"])
 if not mapa_df.empty:
-    layer = pdk.Layer(
-        "HeatmapLayer",
-        data=mapa_df,
-        get_position="[lon, lat]",
-        aggregation="MEAN",
-    )
-    view_state = pdk.ViewState(latitude=mapa_df["lat"].mean(), longitude=mapa_df["lon"].mean(), zoom=9)
-    st.pydeck_chart(pdk.Deck(layers=[layer], initial_view_state=view_state))
+    centro = [mapa_df["lat"].mean(), mapa_df["lon"].mean()]
+    mapa = folium.Map(location=centro, zoom_start=10, tiles="cartodbpositron")
+    HeatMap(mapa_df[["lat", "lon"]].values.tolist()).add_to(mapa)
+    st_folium(mapa, height=500, use_container_width=True, returned_objects=[])
 else:
     st.info("No hay coordenadas registradas en el rango seleccionado.")
 

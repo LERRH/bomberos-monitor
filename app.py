@@ -55,20 +55,61 @@ reports = run_query(
 
 st.metric("Emergencias en el rango seleccionado", len(reports))
 
-def bar_chart_ordenado(serie, x_label, y_label):
+
+def bar_chart_ordenado(serie, x_label, y_label, sort="-y", x_type="N"):
     df = serie.reset_index()
     df.columns = [x_label, y_label]
     chart = (
         alt.Chart(df)
         .mark_bar()
         .encode(
-            x=alt.X(x_label, sort="-y"),
+            x=alt.X(f"{x_label}:{x_type}", sort=sort),
             y=alt.Y(y_label),
             tooltip=[x_label, y_label],
         )
     )
     st.altair_chart(chart, use_container_width=True)
 
+
+st.subheader("Tendencia diaria")
+diaria = reports.groupby(reports["fecha_hora"].dt.date).size().reset_index()
+diaria.columns = ["fecha", "emergencias"]
+linea = alt.Chart(diaria).mark_line(point=True).encode(
+    x=alt.X("fecha:T", axis=alt.Axis(format="%d %b", tickCount="day")),
+    y="emergencias:Q",
+    tooltip=["fecha", "emergencias"],
+)
+st.altair_chart(linea, use_container_width=True)
+
+col_h, col_d = st.columns(2)
+
+with col_h:
+    st.subheader("Por hora del dia")
+    por_hora = (
+        reports.groupby(reports["fecha_hora"].dt.hour)
+        .size()
+        .reindex(range(24), fill_value=0)
+    )
+    bar_chart_ordenado(por_hora, "hora", "emergencias", sort=list(range(24)), x_type="O")
+
+with col_d:
+    st.subheader("Por dia de la semana")
+    dias_es = {0: "Lunes", 1: "Martes", 2: "Miercoles", 3: "Jueves", 4: "Viernes", 5: "Sabado", 6: "Domingo"}
+    dias_orden = list(dias_es.values())
+    por_dia = reports["fecha_hora"].dt.dayofweek.map(dias_es).value_counts().reindex(dias_orden, fill_value=0)
+    bar_chart_ordenado(por_dia, "dia", "emergencias", sort=dias_orden)
+
+col_t, col_z = st.columns(2)
+
+with col_t:
+    st.subheader("Categoria de emergencia")
+    categoria_rank = reports["tipo"].str.split("/").str[0].str.strip().value_counts()
+    bar_chart_ordenado(categoria_rank, "categoria", "emergencias")
+
+with col_z:
+    st.subheader("Distritos con mas emergencias")
+    distrito_rank = reports["direccion"].str.rsplit(" - ", n=1).str[-1].str.strip().value_counts().head(15)
+    bar_chart_ordenado(distrito_rank, "distrito", "emergencias")
 
 exploded = reports.explode("unidades").rename(columns={"unidades": "unidad"}).dropna(subset=["unidad"])
 exploded["cia_num"] = exploded["unidad"].str.extract(r"(\d+)")
